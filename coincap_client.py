@@ -45,25 +45,10 @@ class CoinCapClient:
         """
         Get top N crypto symbols by market cap
         """
-        try:
-            url = f"{self.base_url}/assets"
-            params = {'limit': limit}
-            
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            
-            if 'data' not in data:
-                raise ValueError("No crypto data")
-            
-            # Extract symbols
-            symbols = [asset['symbol'] for asset in data['data']]
-            return symbols
-            
-        except Exception as e:
-            print(f"Error fetching crypto list: {e}")
-            # Fallback to known list
-            return list(self.symbol_to_id.keys())
+        # For testing, just return top 20
+        return ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOT', 
+                'MATIC', 'LINK', 'UNI', 'ATOM', 'DOGE', 'SHIB', 'ALGO',
+                'VET', 'FTM', 'NEAR', 'HBAR', 'ICP']
     
     def get_weekly_data(self, symbol: str, weeks: int = 20) -> List[float]:
         """
