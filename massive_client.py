@@ -32,21 +32,26 @@ class MassiveClient:
         }
         
         try:
+            print(f"    Fetching {symbol}: {url}")
             response = requests.get(url, params=params, timeout=10)
+            print(f"    Response status: {response.status_code}")
             response.raise_for_status()
             data = response.json()
+            print(f"    Response keys: {data.keys()}")
             
             if 'results' not in data or not data['results']:
+                print(f"    Response data: {data}")
                 raise ValueError(f"No data for {symbol}")
             
             # Extract closing prices
             closes = [bar['c'] for bar in data['results']]
+            print(f"    Got {len(closes)} weeks of data")
             
             # Return most recent N weeks
             return closes[:weeks]
             
         except Exception as e:
-            print(f"Error fetching {symbol}: {e}")
+            print(f"    Error fetching {symbol}: {e}")
             raise
     
     def get_sp500_symbols(self) -> List[str]:
