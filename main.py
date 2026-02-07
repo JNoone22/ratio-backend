@@ -239,7 +239,7 @@ def get_asset(symbol):
     
     return jsonify(asset)
 
-@app.route('/api/update', methods=['POST'])
+@app.route('/api/update', methods=['GET', 'POST'])
 def trigger_update():
     """Manually trigger data update (for testing)"""
     success = update_rankings()
