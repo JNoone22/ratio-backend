@@ -243,6 +243,42 @@ def get_asset(symbol):
     
     return jsonify(asset)
 
+@app.route('/api/network-test', methods=['GET'])
+def network_test():
+    """Test network connectivity"""
+    import socket
+    import requests
+    
+    results = {}
+    
+    # Test DNS resolution
+    try:
+        ip = socket.gethostbyname('api.polygon.io')
+        results['polygon_dns'] = f'✓ Resolved to {ip}'
+    except Exception as e:
+        results['polygon_dns'] = f'✗ DNS failed: {str(e)}'
+    
+    try:
+        ip = socket.gethostbyname('api.coincap.io')
+        results['coincap_dns'] = f'✓ Resolved to {ip}'
+    except Exception as e:
+        results['coincap_dns'] = f'✗ DNS failed: {str(e)}'
+    
+    # Test HTTP connection
+    try:
+        response = requests.get('https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/2024-01-01/2024-01-10?apiKey=' + config.MASSIVE_API_KEY, timeout=5)
+        results['polygon_http'] = f'✓ HTTP {response.status_code}'
+    except Exception as e:
+        results['polygon_http'] = f'✗ HTTP failed: {str(e)}'
+    
+    try:
+        response = requests.get('https://api.coincap.io/v2/assets/bitcoin', timeout=5)
+        results['coincap_http'] = f'✓ HTTP {response.status_code}'
+    except Exception as e:
+        results['coincap_http'] = f'✗ HTTP failed: {str(e)}'
+    
+    return jsonify(results)
+
 @app.route('/api/update', methods=['GET', 'POST'])
 def trigger_update():
     """Manually trigger data update (for testing)"""
