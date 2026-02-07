@@ -163,13 +163,17 @@ def update_rankings():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    big_board = cache.get('big_board') or []
+    crypto_explorer = cache.get('crypto_explorer') or []
+    
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
         'last_update': cache.get('last_update'),
-        'big_board_assets': len(cache.get('big_board', [])),
-        'crypto_assets': len(cache.get('crypto_explorer', [])),
-        'massive_api': 'configured' if config.MASSIVE_API_KEY != 'YOUR_KEY_HERE' else 'not configured'
+        'big_board_assets': len(big_board),
+        'crypto_assets': len(crypto_explorer),
+        'massive_api': 'configured' if config.MASSIVE_API_KEY != 'YOUR_KEY_HERE' else 'not configured',
+        'data_loaded': cache.get('last_update') is not None
     })
 
 @app.route('/api/big-board', methods=['GET'])
