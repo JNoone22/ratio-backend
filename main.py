@@ -257,9 +257,9 @@ if __name__ == '__main__':
     print(f"Port: {config.PORT}")
     print("="*60 + "\n")
     
-    # Initial data load
-    print("🔄 Loading initial data...")
-    update_rankings()
+    # Skip initial data load - do it via /api/update endpoint instead
+    print("⚠️  Data not loaded on startup.")
+    print("📍 Trigger data load: POST to /api/update")
     
     # Start server
     print(f"\n🚀 Starting server on port {config.PORT}...")
