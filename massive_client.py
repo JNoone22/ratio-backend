@@ -55,21 +55,11 @@ class MassiveClient:
         For now, using a hardcoded list of major stocks
         In production, would fetch from a maintained list
         """
-        # Top stocks by market cap (simplified for MVP)
-        # In production, fetch full S&P 500 from a reliable source
+        # Top 20 most liquid stocks for testing
         return [
-            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK.B',
-            'UNH', 'JNJ', 'JPM', 'V', 'PG', 'XOM', 'HD', 'CVX', 'MA', 'ABBV',
-            'PFE', 'AVGO', 'COST', 'DIS', 'MRK', 'KO', 'ADBE', 'PEP', 'TMO',
-            'CSCO', 'ACN', 'LLY', 'NKE', 'ABT', 'ORCL', 'WMT', 'CRM', 'VZ',
-            'NFLX', 'DHR', 'INTC', 'CMCSA', 'TXN', 'AMD', 'QCOM', 'NEE', 'PM',
-            'UPS', 'RTX', 'HON', 'INTU', 'UNP', 'IBM', 'SPGI', 'LOW', 'CAT',
-            'BA', 'AMGN', 'GS', 'SBUX', 'BLK', 'AXP', 'DE', 'MDLZ', 'GILD',
-            'BKNG', 'ADI', 'TGT', 'MMC', 'CVS', 'LMT', 'SYK', 'ISRG', 'CI',
-            'MO', 'ZTS', 'VRTX', 'CB', 'PLD', 'DUK', 'SO', 'BDX', 'REGN',
-            'TJX', 'SCHW', 'BSX', 'ATVI', 'BMY', 'USB', 'TMUS', 'CL', 'MMM',
-            'SLB', 'GE', 'EOG', 'NOC', 'FDX', 'APD', 'MU', 'CSX', 'FISV'
-            # ... would extend to full 500
+            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
+            'UNH', 'JPM', 'V', 'XOM', 'HD', 'PG', 'MA', 
+            'COST', 'ABBV', 'AVGO', 'DIS', 'NFLX', 'AMD'
         ]
     
     def get_major_etfs(self) -> List[str]:
@@ -78,16 +68,11 @@ class MassiveClient:
         """
         return [
             # Broad Market
-            'SPY', 'QQQ', 'DIA', 'IWM', 'VOO', 'VTI', 'ARKK',
+            'SPY', 'QQQ', 'DIA', 'IWM',
             # Sectors
-            'XLE', 'XLF', 'XLK', 'XLV', 'XLI', 'XLP', 'XLY', 'XLU', 'XLB', 'XLRE',
-            # International
-            'EFA', 'EEM', 'VWO', 'FXI', 'EWJ', 'EWZ', 'EWU', 'EWG',
-            # Bonds
-            'TLT', 'AGG', 'LQD', 'HYG', 'TIP', 'BND',
-            # Commodities (included here)
-            'GLD', 'SLV', 'USO', 'UNG', 'PPLT', 'PALL', 'CORN', 'WEAT', 'SOYB',
-            'JO', 'CANE', 'CPER', 'DBC', 'GSG', 'PDBC', 'GCC', 'UGA'
+            'XLE', 'XLF', 'XLK', 'XLV',
+            # Commodities
+            'GLD', 'SLV', 'USO', 'UNG'
         ]
     
     def test_connection(self) -> bool:
