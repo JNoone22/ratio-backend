@@ -87,8 +87,8 @@ class MassiveClient:
             'IBM', 'INTC', 'QCOM', 'TXN', 'INTU', 'NOW', 'AMAT', 'ADI', 'LRCX', 'SNPS',
             'CDNS', 'MRVL', 'KLAC', 'ANET', 'PANW', 'MU', 'NXPI', 'ADSK', 'CRWD', 'FTNT',
             'WDAY', 'ANSS', 'ROP', 'APH', 'MSI', 'DELL', 'HPQ', 'NTAP', 'STX', 'WDC',
-            'FFIV', 'JNPR', 'AKAM', 'KEYS', 'ZBRA', 'FICO', 'TYL', 'TRMB', 'CDW', 'IT',
-            'GLW', 'HPE', 'MPWR', 'TDY', 'TER', 'SWKS', 'ENPH', 'QRVO', 'ON', 'GEN',
+            'SNDK', 'FFIV', 'JNPR', 'AKAM', 'KEYS', 'ZBRA', 'FICO', 'TYL', 'TRMB', 'CDW',
+            'IT', 'GLW', 'HPE', 'MPWR', 'TDY', 'TER', 'SWKS', 'ENPH', 'QRVO', 'ON', 'GEN',
             'SMCI', 'CTSH', 'ACN', 'ORCL', 'CRM', 'ADBE', 'NOW'
         ]
         
@@ -177,12 +177,27 @@ class MassiveClient:
             'BALL', 'AVY', 'CF', 'MOS', 'IP', 'PKG', 'AMCR', 'SEE'
         ]
         
+        # EMERGING TECH (not in S&P 500 - high growth sectors)
+        emerging_tech = [
+            # Bitcoin/Blockchain
+            'MSTR', 'COIN', 'RIOT', 'MARA', 'CLSK', 'HUT', 'BITF',
+            
+            # AI/Data
+            'PLTR', 'AI', 'BBAI', 'SOUN', 'SNOW', 'NET', 'DDOG', 'ZS', 'OKTA', 'MDB',
+            
+            # Quantum Computing
+            'IONQ', 'RGTI', 'QUBT',
+            
+            # Space/Satellite
+            'RKLB', 'SPCE', 'ASTS'
+        ]
+        
         # Combine all sectors
         all_stocks = (tech + financials + healthcare + consumer_disc + comm_services + 
-                     industrials + consumer_staples + energy + utilities + real_estate + materials)
+                     industrials + consumer_staples + energy + utilities + real_estate + materials + emerging_tech)
         
-        # Remove duplicates and return first 500
-        return list(dict.fromkeys(all_stocks))[:500]
+        # Remove duplicates and return all
+        return list(dict.fromkeys(all_stocks))
     
     def get_major_etfs(self) -> List[str]:
         """
