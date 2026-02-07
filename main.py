@@ -47,16 +47,20 @@ def fetch_all_assets():
     for i, symbol in enumerate(stock_symbols):
         try:
             prices = massive.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+            print(f"  {symbol}: Got {len(prices)} weeks of data")
             if len(prices) >= config.MA_PERIOD:
                 all_data[symbol] = prices
+                print(f"  ✓ {symbol} added to dataset")
             else:
                 errors.append(f"{symbol}: insufficient data ({len(prices)} weeks)")
+                print(f"  ✗ {symbol}: only {len(prices)} weeks")
             
-            if (i + 1) % 20 == 0:
-                print(f"  Processed {i + 1}/{len(stock_symbols)} stocks...")
-                time.sleep(1)  # Rate limiting
+            if (i + 1) % 10 == 0:
+                print(f"  Progress: {i + 1}/{len(stock_symbols)} stocks...")
+                time.sleep(0.5)  # Reduced from 1 second
         except Exception as e:
             errors.append(f"{symbol}: {str(e)}")
+            print(f"  ✗ {symbol}: ERROR - {str(e)}")
     
     print(f"✓ Loaded {len([s for s in stock_symbols if s in all_data])} stocks")
     
