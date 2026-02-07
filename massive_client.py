@@ -78,28 +78,84 @@ class MassiveClient:
     
     def get_sp500_symbols(self) -> List[str]:
         """
-        Get S&P 500 stock symbols
-        For now, using a hardcoded list of major stocks
-        In production, would fetch from a maintained list
+        Top 100 US stocks by market capitalization
         """
-        # Top 20 most liquid stocks for testing
         return [
-            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
-            'UNH', 'JPM', 'V', 'XOM', 'HD', 'PG', 'MA', 
-            'COST', 'ABBV', 'AVGO', 'DIS', 'NFLX', 'AMD'
+            # Top 10 (Mega cap >$1T)
+            'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'META', 'TSLA', 'BRK.B', 'LLY', 'AVGO',
+            
+            # 11-20
+            'JPM', 'V', 'UNH', 'XOM', 'WMT', 'MA', 'PG', 'JNJ', 'HD', 'ORCL',
+            
+            # 21-30
+            'COST', 'ABBV', 'BAC', 'NFLX', 'CRM', 'CVX', 'AMD', 'MRK', 'KO', 'ADBE',
+            
+            # 31-40
+            'PEP', 'TMO', 'CSCO', 'MCD', 'ACN', 'ABT', 'INTC', 'WFC', 'LIN', 'QCOM',
+            
+            # 41-50
+            'DIS', 'IBM', 'DHR', 'VZ', 'CMCSA', 'TXN', 'NEE', 'AMGN', 'PM', 'COP',
+            
+            # 51-60
+            'RTX', 'INTU', 'UNP', 'HON', 'SPGI', 'LOW', 'GE', 'NKE', 'MS', 'UBER',
+            
+            # 61-70
+            'UPS', 'CAT', 'AXP', 'ELV', 'BA', 'BLK', 'AMAT', 'PLD', 'GS', 'BKNG',
+            
+            # 71-80
+            'GILD', 'DE', 'NOW', 'SYK', 'ADI', 'ISRG', 'SCHW', 'VRTX', 'MDLZ', 'TJX',
+            
+            # 81-90
+            'LMT', 'CI', 'ADP', 'REGN', 'MMC', 'PGR', 'CB', 'C', 'BMY', 'LRCX',
+            
+            # 91-100
+            'MO', 'ETN', 'SO', 'BSX', 'TMUS', 'BDX', 'SBUX', 'AMT', 'EQIX', 'ZTS'
         ]
     
     def get_major_etfs(self) -> List[str]:
         """
-        Get major ETF symbols
+        Get major ETF symbols covering all asset classes
         """
         return [
-            # Broad Market
-            'SPY', 'QQQ', 'DIA', 'IWM',
-            # Sectors
-            'XLE', 'XLF', 'XLK', 'XLV',
+            # Broad Market Equity
+            'SPY', 'QQQ', 'DIA', 'IWM', 'VOO', 'VTI', 'IVV', 'VEA', 'IEFA',
+            
+            # Sector ETFs
+            'XLE',   # Energy
+            'XLF',   # Financials
+            'XLK',   # Technology
+            'XLV',   # Healthcare
+            'XLI',   # Industrials
+            'XLP',   # Consumer Staples
+            'XLY',   # Consumer Discretionary
+            'XLU',   # Utilities
+            'XLB',   # Materials
+            'XLRE',  # Real Estate
+            'XLC',   # Communication Services
+            
+            # International
+            'EFA', 'EEM', 'VWO', 'IEMG', 'FXI', 'EWJ', 'EWZ', 'EWU', 'EWG', 'INDA',
+            
+            # Fixed Income
+            'TLT', 'AGG', 'LQD', 'HYG', 'TIP', 'BND', 'SHY', 'IEF',
+            
             # Commodities
-            'GLD', 'SLV', 'USO', 'UNG'
+            'GLD',   # Gold
+            'SLV',   # Silver
+            'USO',   # Oil
+            'UNG',   # Natural Gas
+            'DBC',   # Broad Commodities
+            'CORN',  # Corn
+            'WEAT',  # Wheat
+            'SOYB',  # Soybeans
+            
+            # Thematic/Strategy
+            'ARKK',  # Innovation
+            'XBI',   # Biotech
+            'SMH',   # Semiconductors
+            'IBB',   # Biotech
+            'VNQ',   # REITs
+            'GDX',   # Gold Miners
         ]
     
     def test_connection(self) -> bool:
