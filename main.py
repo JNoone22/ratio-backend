@@ -10,7 +10,7 @@ import json
 
 import config
 from massive_client import MassiveClient
-from coincap_client import CoinGeckoClient
+from coincap_client import CoinbaseClient
 from tournament import calculate_tournament_rankings, format_rankings_summary
 
 app = Flask(__name__)
@@ -18,7 +18,7 @@ CORS(app)
 
 # Initialize API clients
 massive = MassiveClient(config.MASSIVE_API_KEY)
-coingecko = CoinGeckoClient()
+coinbase = CoinbaseClient()
 
 # In-memory cache (will use Redis in production)
 cache = {
@@ -87,20 +87,18 @@ def fetch_all_assets():
     
     # 3. Fetch crypto
     print("\n🪙 Fetching cryptocurrency data...")
-    crypto_symbols = coingecko.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
+    crypto_symbols = coinbase.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
     print(f"Found {len(crypto_symbols)} crypto symbols")
     
     for i, symbol in enumerate(crypto_symbols):
         try:
-            prices = coingecko.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+            prices = coinbase.get_weekly_data(symbol, weeks=config.MA_PERIOD)
             if len(prices) >= config.MA_PERIOD:
                 all_data[symbol] = prices
             else:
                 errors.append(f"{symbol}: insufficient data")
             
-            # CoinGecko free tier: 10-50 calls/minute
-            # Sleep 2 seconds between calls = max 30 calls/minute (safe)
-            time.sleep(2)
+            # Coinbase allows 3-15 requests/second - no delay needed!
             
             if (i + 1) % 5 == 0:
                 print(f"  Processed {i + 1}/{len(crypto_symbols)} crypto...")
@@ -138,8 +136,8 @@ def update_rankings():
         # Identify crypto assets for crypto explorer
         crypto_rankings = [
             asset for asset in all_rankings 
-            if asset['symbol'] in coingecko.symbol_to_id or 
-               asset['symbol'] in coingecko.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
+            if asset['symbol'] in coinbase.symbol_to_product or 
+               asset['symbol'] in coinbase.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
         ]
         
         # Get top 20 crypto for big board
@@ -149,7 +147,7 @@ def update_rankings():
         # Create big board (stocks + ETFs + top 20 crypto)
         big_board = [
             asset for asset in all_rankings
-            if asset['symbol'] not in coingecko.symbol_to_id or  # Not crypto
+            if asset['symbol'] not in coinbase.symbol_to_product or  # Not crypto
                asset['symbol'] in top_20_crypto_symbols  # Or top 20 crypto
         ]
         
@@ -262,10 +260,10 @@ def network_test():
         results['polygon_dns'] = f'✗ DNS failed: {str(e)}'
     
     try:
-        ip = socket.gethostbyname('api.coingecko.com')
-        results['coingecko_dns'] = f'✓ Resolved to {ip}'
+        ip = socket.gethostbyname('api.exchange.coinbase.com')
+        results['coinbase_dns'] = f'✓ Resolved to {ip}'
     except Exception as e:
-        results['coingecko_dns'] = f'✗ DNS failed: {str(e)}'
+        results['coinbase_dns'] = f'✗ DNS failed: {str(e)}'
     
     # Test HTTP connection
     try:
@@ -275,10 +273,10 @@ def network_test():
         results['polygon_http'] = f'✗ HTTP failed: {str(e)}'
     
     try:
-        response = requests.get('https://api.coingecko.com/api/v3/ping', timeout=5)
-        results['coingecko_http'] = f'✓ HTTP {response.status_code}'
+        response = requests.get('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=86400', timeout=5)
+        results['coinbase_http'] = f'✓ HTTP {response.status_code}'
     except Exception as e:
-        results['coingecko_http'] = f'✗ HTTP failed: {str(e)}'
+        results['coinbase_http'] = f'✗ HTTP failed: {str(e)}'
     
     return jsonify(results)
 
@@ -296,7 +294,7 @@ if __name__ == '__main__':
     print("RATIO - ASSET STRENGTH RANKINGS API")
     print("="*60)
     print(f"Massive API: {'✓ Configured' if config.MASSIVE_API_KEY != 'YOUR_KEY_HERE' else '✗ Not configured'}")
-    print(f"CoinGecko API: ✓ Ready (no key needed)")
+    print(f"Coinbase API: ✓ Ready (public, no key needed)")
     print(f"Port: {config.PORT}")
     print("="*60 + "\n")
     
