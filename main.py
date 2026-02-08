@@ -130,7 +130,7 @@ def fetch_all_assets():
     
     print(f"✓ Loaded {len([s for s in cryptocompare_symbols if s in all_data])} from CryptoCompare")
     
-    print(f"✓ Loaded {len([s for s in crypto_symbols if s in all_data])} cryptocurrencies")
+    print(f"✓ Loaded {len([s for s in coinbase_symbols if s in all_data]) + len([s for s in cryptocompare_symbols if s in all_data])} cryptocurrencies total")
     
     print("\n" + "="*60)
     print(f"TOTAL ASSETS LOADED: {len(all_data)}")
