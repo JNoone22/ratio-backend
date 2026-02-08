@@ -13,32 +13,56 @@ class CoinbaseClient:
         self.base_url = 'https://api.coinbase.com/v2'
         self.exchange_url = 'https://api.exchange.coinbase.com'
         
-        # Coinbase product IDs for major crypto
-        self.symbol_to_product = {
-            'BTC': 'BTC-USD',
-            'ETH': 'ETH-USD',
-            'SOL': 'SOL-USD',
-            'XRP': 'XRP-USD',
-            'ADA': 'ADA-USD',
-            'AVAX': 'AVAX-USD',
-            'DOT': 'DOT-USD',
-            'MATIC': 'MATIC-USD',
-            'LINK': 'LINK-USD',
-            'UNI': 'UNI-USD',
-            'ATOM': 'ATOM-USD',
-            'ALGO': 'ALGO-USD',
-            'NEAR': 'NEAR-USD',
-            'ICP': 'ICP-USD',
-            'APT': 'APT-USD',
-            'DOGE': 'DOGE-USD',
-            'SHIB': 'SHIB-USD',
-        }
+        # Cache for available products
+        self._products = None
+        self.symbol_to_product = {}
+    
+    def get_all_products(self) -> Dict[str, str]:
+        """
+        Fetch all available USD trading pairs from Coinbase
+        Returns: {symbol: product_id} dict
+        """
+        if self._products is not None:
+            return self._products
+        
+        try:
+            print("    Fetching all available Coinbase products...")
+            url = f"{self.exchange_url}/products"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            products = response.json()
+            
+            # Filter for USD pairs only
+            self.symbol_to_product = {}
+            for product in products:
+                product_id = product.get('id', '')
+                if product_id.endswith('-USD'):
+                    symbol = product_id.replace('-USD', '')
+                    self.symbol_to_product[symbol] = product_id
+            
+            self._products = self.symbol_to_product
+            print(f"    ✓ Found {len(self.symbol_to_product)} USD trading pairs")
+            return self.symbol_to_product
+            
+        except Exception as e:
+            print(f"    ✗ Error fetching products: {e}")
+            # Fallback to basic list if API fails
+            self.symbol_to_product = {
+                'BTC': 'BTC-USD', 'ETH': 'ETH-USD', 'SOL': 'SOL-USD',
+                'XRP': 'XRP-USD', 'ADA': 'ADA-USD', 'AVAX': 'AVAX-USD',
+                'DOT': 'DOT-USD', 'MATIC': 'MATIC-USD', 'LINK': 'LINK-USD',
+                'UNI': 'UNI-USD', 'ATOM': 'ATOM-USD', 'ALGO': 'ALGO-USD',
+                'NEAR': 'NEAR-USD', 'ICP': 'ICP-USD', 'APT': 'APT-USD',
+                'DOGE': 'DOGE-USD', 'SHIB': 'SHIB-USD',
+            }
+            return self.symbol_to_product
     
     def get_top_crypto_symbols(self, limit: int = 200) -> List[str]:
         """
-        Get top crypto symbols available on Coinbase
+        Get all crypto symbols available on Coinbase
         """
-        return list(self.symbol_to_product.keys())
+        products = self.get_all_products()
+        return list(products.keys())[:limit]
     
     def get_weekly_data(self, symbol: str, weeks: int = 20) -> List[float]:
         """
