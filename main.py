@@ -98,9 +98,12 @@ def fetch_all_assets():
             else:
                 errors.append(f"{symbol}: insufficient data")
             
+            # CoinGecko free tier: 10-50 calls/minute
+            # Sleep 2 seconds between calls = max 30 calls/minute (safe)
+            time.sleep(2)
+            
             if (i + 1) % 5 == 0:
                 print(f"  Processed {i + 1}/{len(crypto_symbols)} crypto...")
-                time.sleep(2)  # CoinGecko rate limiting
         except Exception as e:
             errors.append(f"{symbol}: {str(e)}")
     
@@ -146,7 +149,7 @@ def update_rankings():
         # Create big board (stocks + ETFs + top 20 crypto)
         big_board = [
             asset for asset in all_rankings
-            if asset['symbol'] not in coincap.symbol_to_id or  # Not crypto
+            if asset['symbol'] not in coingecko.symbol_to_id or  # Not crypto
                asset['symbol'] in top_20_crypto_symbols  # Or top 20 crypto
         ]
         
