@@ -133,11 +133,27 @@ def update_rankings():
         print("\n🏆 Calculating tournament rankings...")
         all_rankings = calculate_tournament_rankings(assets_data)
         
+        # Get symbols lists for categorization
+        stock_symbols = set(massive.get_sp500_symbols())
+        etf_symbols = set(massive.get_major_etfs())
+        crypto_symbols = set(coinbase.symbol_to_product.keys())
+        
+        # Add asset type to each ranking
+        for asset in all_rankings:
+            symbol = asset['symbol']
+            if symbol in crypto_symbols:
+                asset['type'] = 'crypto'
+            elif symbol in etf_symbols:
+                asset['type'] = 'etf'
+            elif symbol in stock_symbols:
+                asset['type'] = 'stock'
+            else:
+                asset['type'] = 'stock'  # Default to stock
+        
         # Identify crypto assets for crypto explorer
         crypto_rankings = [
             asset for asset in all_rankings 
-            if asset['symbol'] in coinbase.symbol_to_product or 
-               asset['symbol'] in coinbase.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
+            if asset.get('type') == 'crypto'
         ]
         
         # Get top 20 crypto for big board
@@ -147,7 +163,7 @@ def update_rankings():
         # Create big board (stocks + ETFs + top 20 crypto)
         big_board = [
             asset for asset in all_rankings
-            if asset['symbol'] not in coinbase.symbol_to_product or  # Not crypto
+            if asset.get('type') != 'crypto' or  # Not crypto
                asset['symbol'] in top_20_crypto_symbols  # Or top 20 crypto
         ]
         
