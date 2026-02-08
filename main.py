@@ -29,9 +29,13 @@ cache = {
     'last_update': None
 }
 
-def fetch_all_assets():
+def fetch_all_assets(test_mode=False):
     """
     Fetch data for all assets
+    
+    Args:
+        test_mode: If True, use limited asset set for fast iteration
+        
     Returns: Dict of {symbol: [weekly_closes]}
     """
     print("\n" + "="*60)
@@ -171,7 +175,7 @@ def update_rankings(test_mode=False):
     """
     try:
         # Fetch all asset data
-        assets_data = fetch_all_assets()
+        assets_data = fetch_all_assets(test_mode=test_mode)
         
         if len(assets_data) < 10:
             raise ValueError("Not enough assets loaded")
