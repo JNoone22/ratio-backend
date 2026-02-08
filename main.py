@@ -44,7 +44,12 @@ def fetch_all_assets():
     # 1. Fetch stocks
     print("\n📊 Fetching S&P 500 stocks...")
     stock_symbols = massive.get_sp500_symbols()
-    print(f"Found {len(stock_symbols)} stock symbols")
+    
+    if test_mode:
+        stock_symbols = stock_symbols[:50]  # Only 50 stocks in test mode
+        print(f"⚡ TEST MODE: Limiting to {len(stock_symbols)} stocks")
+    else:
+        print(f"Found {len(stock_symbols)} stock symbols")
     
     for i, symbol in enumerate(stock_symbols):
         try:
@@ -69,7 +74,12 @@ def fetch_all_assets():
     # 2. Fetch ETFs
     print("\n📈 Fetching ETFs...")
     etf_symbols = massive.get_major_etfs()
-    print(f"Found {len(etf_symbols)} ETF symbols")
+    
+    if test_mode:
+        etf_symbols = etf_symbols[:10]  # Only 10 ETFs in test mode
+        print(f"⚡ TEST MODE: Limiting to {len(etf_symbols)} ETFs")
+    else:
+        print(f"Found {len(etf_symbols)} ETF symbols")
     
     for i, symbol in enumerate(etf_symbols):
         try:
@@ -90,7 +100,12 @@ def fetch_all_assets():
     # 3. Fetch crypto from Coinbase
     print("\n🪙 Fetching cryptocurrency data from Coinbase...")
     coinbase_symbols = coinbase.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
-    print(f"Found {len(coinbase_symbols)} crypto symbols on Coinbase")
+    
+    if test_mode:
+        coinbase_symbols = coinbase_symbols[:10]  # Only 10 crypto in test mode
+        print(f"⚡ TEST MODE: Limiting to {len(coinbase_symbols)} crypto from Coinbase")
+    else:
+        print(f"Found {len(coinbase_symbols)} crypto symbols on Coinbase")
     
     for i, symbol in enumerate(coinbase_symbols):
         try:
@@ -107,28 +122,32 @@ def fetch_all_assets():
     
     print(f"✓ Loaded {len([s for s in coinbase_symbols if s in all_data])} from Coinbase")
     
-    # 4. Fetch missing top coins from CryptoCompare
-    print("\n🪙 Fetching additional crypto from CryptoCompare...")
-    cryptocompare_symbols = cryptocompare.get_symbols()
-    print(f"Found {len(cryptocompare_symbols)} additional crypto symbols")
-    
-    for i, symbol in enumerate(cryptocompare_symbols):
-        try:
-            prices = cryptocompare.get_weekly_data(symbol, weeks=config.MA_PERIOD)
-            if len(prices) >= config.MA_PERIOD:
-                all_data[symbol] = prices
-            else:
-                errors.append(f"{symbol}: insufficient data")
-            
-            # Rate limiting: 1 call per second to stay under 50/minute
-            time.sleep(1)
-            
-            if (i + 1) % 5 == 0:
-                print(f"  Processed {i + 1}/{len(cryptocompare_symbols)} crypto from CryptoCompare...")
-        except Exception as e:
-            errors.append(f"{symbol}: {str(e)}")
-    
-    print(f"✓ Loaded {len([s for s in cryptocompare_symbols if s in all_data])} from CryptoCompare")
+    # 4. Fetch missing top coins from CryptoCompare (skip in test mode)
+    if not test_mode:
+        print("\n🪙 Fetching additional crypto from CryptoCompare...")
+        cryptocompare_symbols = cryptocompare.get_symbols()
+        print(f"Found {len(cryptocompare_symbols)} additional crypto symbols")
+        
+        for i, symbol in enumerate(cryptocompare_symbols):
+            try:
+                prices = cryptocompare.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+                if len(prices) >= config.MA_PERIOD:
+                    all_data[symbol] = prices
+                else:
+                    errors.append(f"{symbol}: insufficient data")
+                
+                # Rate limiting: 1 call per second to stay under 50/minute
+                time.sleep(1)
+                
+                if (i + 1) % 5 == 0:
+                    print(f"  Processed {i + 1}/{len(cryptocompare_symbols)} crypto from CryptoCompare...")
+            except Exception as e:
+                errors.append(f"{symbol}: {str(e)}")
+        
+        print(f"✓ Loaded {len([s for s in cryptocompare_symbols if s in all_data])} from CryptoCompare")
+    else:
+        print("⚡ TEST MODE: Skipping CryptoCompare")
+        cryptocompare_symbols = []
     
     print(f"✓ Loaded {len([s for s in coinbase_symbols if s in all_data]) + len([s for s in cryptocompare_symbols if s in all_data])} cryptocurrencies total")
     
@@ -142,10 +161,13 @@ def fetch_all_assets():
     
     return all_data
 
-def update_rankings():
+def update_rankings(test_mode=False):
     """
     Fetch fresh data and calculate rankings
     Updates global cache
+    
+    Args:
+        test_mode: If True, use limited asset set for fast iteration (2-3 min)
     """
     try:
         # Fetch all asset data
@@ -326,9 +348,17 @@ def network_test():
 @app.route('/api/update', methods=['GET', 'POST'])
 def trigger_update():
     """Manually trigger data update (for testing)"""
-    success = update_rankings()
+    # Check for test mode
+    test_mode = request.args.get('test', '').lower() == 'true'
+    
+    success = update_rankings(test_mode=test_mode)
     if success:
-        return jsonify({'message': 'Update successful', 'timestamp': cache['last_update']})
+        mode_msg = ' (TEST MODE - limited assets)' if test_mode else ''
+        return jsonify({
+            'message': f'Update successful{mode_msg}',
+            'timestamp': cache['last_update'],
+            'assets': len(cache.get('big_board', []))
+        })
     else:
         return jsonify({'error': 'Update failed'}), 500
 
