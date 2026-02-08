@@ -10,7 +10,7 @@ import json
 
 import config
 from massive_client import MassiveClient
-from coincap_client import CoinCapClient
+from coincap_client import CoinGeckoClient
 from tournament import calculate_tournament_rankings, format_rankings_summary
 
 app = Flask(__name__)
@@ -18,7 +18,7 @@ CORS(app)
 
 # Initialize API clients
 massive = MassiveClient(config.MASSIVE_API_KEY)
-coincap = CoinCapClient()
+coingecko = CoinGeckoClient()
 
 # In-memory cache (will use Redis in production)
 cache = {
@@ -87,20 +87,20 @@ def fetch_all_assets():
     
     # 3. Fetch crypto
     print("\n🪙 Fetching cryptocurrency data...")
-    crypto_symbols = coincap.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
+    crypto_symbols = coingecko.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
     print(f"Found {len(crypto_symbols)} crypto symbols")
     
     for i, symbol in enumerate(crypto_symbols):
         try:
-            prices = coincap.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+            prices = coingecko.get_weekly_data(symbol, weeks=config.MA_PERIOD)
             if len(prices) >= config.MA_PERIOD:
                 all_data[symbol] = prices
             else:
                 errors.append(f"{symbol}: insufficient data")
             
-            if (i + 1) % 20 == 0:
+            if (i + 1) % 5 == 0:
                 print(f"  Processed {i + 1}/{len(crypto_symbols)} crypto...")
-                time.sleep(0.5)
+                time.sleep(2)  # CoinGecko rate limiting
         except Exception as e:
             errors.append(f"{symbol}: {str(e)}")
     
@@ -135,8 +135,8 @@ def update_rankings():
         # Identify crypto assets for crypto explorer
         crypto_rankings = [
             asset for asset in all_rankings 
-            if asset['symbol'] in coincap.symbol_to_id or 
-               asset['symbol'] in coincap.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
+            if asset['symbol'] in coingecko.symbol_to_id or 
+               asset['symbol'] in coingecko.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
         ]
         
         # Get top 20 crypto for big board
@@ -259,10 +259,10 @@ def network_test():
         results['polygon_dns'] = f'✗ DNS failed: {str(e)}'
     
     try:
-        ip = socket.gethostbyname('api.coincap.io')
-        results['coincap_dns'] = f'✓ Resolved to {ip}'
+        ip = socket.gethostbyname('api.coingecko.com')
+        results['coingecko_dns'] = f'✓ Resolved to {ip}'
     except Exception as e:
-        results['coincap_dns'] = f'✗ DNS failed: {str(e)}'
+        results['coingecko_dns'] = f'✗ DNS failed: {str(e)}'
     
     # Test HTTP connection
     try:
@@ -272,10 +272,10 @@ def network_test():
         results['polygon_http'] = f'✗ HTTP failed: {str(e)}'
     
     try:
-        response = requests.get('https://api.coincap.io/v2/assets/bitcoin', timeout=5)
-        results['coincap_http'] = f'✓ HTTP {response.status_code}'
+        response = requests.get('https://api.coingecko.com/api/v3/ping', timeout=5)
+        results['coingecko_http'] = f'✓ HTTP {response.status_code}'
     except Exception as e:
-        results['coincap_http'] = f'✗ HTTP failed: {str(e)}'
+        results['coingecko_http'] = f'✗ HTTP failed: {str(e)}'
     
     return jsonify(results)
 
@@ -293,7 +293,7 @@ if __name__ == '__main__':
     print("RATIO - ASSET STRENGTH RANKINGS API")
     print("="*60)
     print(f"Massive API: {'✓ Configured' if config.MASSIVE_API_KEY != 'YOUR_KEY_HERE' else '✗ Not configured'}")
-    print(f"CoinCap API: ✓ Ready (no key needed)")
+    print(f"CoinGecko API: ✓ Ready (no key needed)")
     print(f"Port: {config.PORT}")
     print("="*60 + "\n")
     
