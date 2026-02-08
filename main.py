@@ -11,6 +11,7 @@ import json
 import config
 from massive_client import MassiveClient
 from coincap_client import CoinbaseClient
+from cryptocompare_client import CryptoCompareClient
 from tournament import calculate_tournament_rankings, format_rankings_summary
 
 app = Flask(__name__)
@@ -19,6 +20,7 @@ CORS(app)
 # Initialize API clients
 massive = MassiveClient(config.MASSIVE_API_KEY)
 coinbase = CoinbaseClient()
+cryptocompare = CryptoCompareClient()
 
 # In-memory cache (will use Redis in production)
 cache = {
@@ -85,12 +87,12 @@ def fetch_all_assets():
     
     print(f"✓ Loaded {len([s for s in etf_symbols if s in all_data])} ETFs")
     
-    # 3. Fetch crypto
-    print("\n🪙 Fetching cryptocurrency data...")
-    crypto_symbols = coinbase.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
-    print(f"Found {len(crypto_symbols)} crypto symbols")
+    # 3. Fetch crypto from Coinbase
+    print("\n🪙 Fetching cryptocurrency data from Coinbase...")
+    coinbase_symbols = coinbase.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
+    print(f"Found {len(coinbase_symbols)} crypto symbols on Coinbase")
     
-    for i, symbol in enumerate(crypto_symbols):
+    for i, symbol in enumerate(coinbase_symbols):
         try:
             prices = coinbase.get_weekly_data(symbol, weeks=config.MA_PERIOD)
             if len(prices) >= config.MA_PERIOD:
@@ -98,12 +100,35 @@ def fetch_all_assets():
             else:
                 errors.append(f"{symbol}: insufficient data")
             
-            # Coinbase allows 3-15 requests/second - no delay needed!
-            
-            if (i + 1) % 5 == 0:
-                print(f"  Processed {i + 1}/{len(crypto_symbols)} crypto...")
+            if (i + 1) % 10 == 0:
+                print(f"  Processed {i + 1}/{len(coinbase_symbols)} crypto from Coinbase...")
         except Exception as e:
             errors.append(f"{symbol}: {str(e)}")
+    
+    print(f"✓ Loaded {len([s for s in coinbase_symbols if s in all_data])} from Coinbase")
+    
+    # 4. Fetch missing top coins from CryptoCompare
+    print("\n🪙 Fetching additional crypto from CryptoCompare...")
+    cryptocompare_symbols = cryptocompare.get_symbols()
+    print(f"Found {len(cryptocompare_symbols)} additional crypto symbols")
+    
+    for i, symbol in enumerate(cryptocompare_symbols):
+        try:
+            prices = cryptocompare.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+            if len(prices) >= config.MA_PERIOD:
+                all_data[symbol] = prices
+            else:
+                errors.append(f"{symbol}: insufficient data")
+            
+            # Rate limiting: 1 call per second to stay under 50/minute
+            time.sleep(1)
+            
+            if (i + 1) % 5 == 0:
+                print(f"  Processed {i + 1}/{len(cryptocompare_symbols)} crypto from CryptoCompare...")
+        except Exception as e:
+            errors.append(f"{symbol}: {str(e)}")
+    
+    print(f"✓ Loaded {len([s for s in cryptocompare_symbols if s in all_data])} from CryptoCompare")
     
     print(f"✓ Loaded {len([s for s in crypto_symbols if s in all_data])} cryptocurrencies")
     
@@ -136,12 +161,14 @@ def update_rankings():
         # Get symbols lists for categorization
         stock_symbols = set(massive.get_sp500_symbols())
         etf_symbols = set(massive.get_major_etfs())
-        crypto_symbols = set(coinbase.symbol_to_product.keys())
+        coinbase_crypto = set(coinbase.symbol_to_product.keys())
+        cryptocompare_crypto = set(cryptocompare.symbols.keys())
+        all_crypto_symbols = coinbase_crypto | cryptocompare_crypto
         
         # Add asset type to each ranking
         for asset in all_rankings:
             symbol = asset['symbol']
-            if symbol in crypto_symbols:
+            if symbol in all_crypto_symbols:
                 asset['type'] = 'crypto'
             elif symbol in etf_symbols:
                 asset['type'] = 'etf'
@@ -310,7 +337,8 @@ if __name__ == '__main__':
     print("RATIO - ASSET STRENGTH RANKINGS API")
     print("="*60)
     print(f"Massive API: {'✓ Configured' if config.MASSIVE_API_KEY != 'YOUR_KEY_HERE' else '✗ Not configured'}")
-    print(f"Coinbase API: ✓ Ready (public, no key needed)")
+    print(f"Coinbase API: ✓ Ready (~200 crypto)")
+    print(f"CryptoCompare API: ✓ Ready (top 50 missing coins)")
     print(f"Port: {config.PORT}")
     print("="*60 + "\n")
     
