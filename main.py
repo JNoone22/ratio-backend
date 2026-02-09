@@ -91,11 +91,9 @@ def fetch_assets_by_type(asset_type: str, test_mode=False) -> dict:
                 pass
     
     elif asset_type == 'crypto':
-        # Coinbase crypto
-        symbols = coinbase.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
-        if test_mode:
-            symbols = symbols[:10]
-        print(f"Fetching {len(symbols)} crypto from Coinbase...")
+        # Only BTC and ETH for now
+        symbols = ['BTC', 'ETH']
+        print(f"Fetching {len(symbols)} crypto (BTC + ETH only)...")
         
         for symbol in symbols:
             try:
@@ -104,19 +102,6 @@ def fetch_assets_by_type(asset_type: str, test_mode=False) -> dict:
                     all_data[symbol] = prices
             except:
                 pass
-        
-        # CryptoCompare crypto (if not test mode)
-        if not test_mode:
-            cc_symbols = cryptocompare.get_symbols()
-            print(f"Fetching {len(cc_symbols)} crypto from CryptoCompare...")
-            for symbol in cc_symbols:
-                try:
-                    prices = cryptocompare.get_weekly_data(symbol, weeks=config.MA_PERIOD)
-                    if len(prices) >= config.MA_PERIOD:
-                        all_data[symbol] = prices
-                    time.sleep(1)  # Rate limiting
-                except:
-                    pass
     
     return all_data
 
@@ -192,15 +177,15 @@ def fetch_all_assets(test_mode=False):
     
     print(f"✓ Loaded {len([s for s in etf_symbols if s in all_data])} ETFs")
     
-    # 3. Fetch crypto from Coinbase
+    # 3. Fetch crypto from Coinbase (BTC + ETH only)
     print("\n🪙 Fetching cryptocurrency data from Coinbase...")
-    coinbase_symbols = coinbase.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
+    coinbase_symbols = ['BTC', 'ETH']  # Only BTC and ETH for now
     
     if test_mode:
-        coinbase_symbols = coinbase_symbols[:10]  # Only 10 crypto in test mode
-        print(f"⚡ TEST MODE: Limiting to {len(coinbase_symbols)} crypto from Coinbase")
+        coinbase_symbols = ['BTC']  # Just BTC in test mode
+        print(f"⚡ TEST MODE: Limiting to {len(coinbase_symbols)} crypto")
     else:
-        print(f"Found {len(coinbase_symbols)} crypto symbols on Coinbase")
+        print(f"Found {len(coinbase_symbols)} crypto (BTC + ETH only)")
     
     for i, symbol in enumerate(coinbase_symbols):
         try:
@@ -217,32 +202,8 @@ def fetch_all_assets(test_mode=False):
     
     print(f"✓ Loaded {len([s for s in coinbase_symbols if s in all_data])} from Coinbase")
     
-    # 4. Fetch missing top coins from CryptoCompare (skip in test mode)
-    if not test_mode:
-        print("\n🪙 Fetching additional crypto from CryptoCompare...")
-        cryptocompare_symbols = cryptocompare.get_symbols()
-        print(f"Found {len(cryptocompare_symbols)} additional crypto symbols")
-        
-        for i, symbol in enumerate(cryptocompare_symbols):
-            try:
-                prices = cryptocompare.get_weekly_data(symbol, weeks=config.MA_PERIOD)
-                if len(prices) >= config.MA_PERIOD:
-                    all_data[symbol] = prices
-                else:
-                    errors.append(f"{symbol}: insufficient data")
-                
-                # Rate limiting: 1 call per second to stay under 50/minute
-                time.sleep(1)
-                
-                if (i + 1) % 5 == 0:
-                    print(f"  Processed {i + 1}/{len(cryptocompare_symbols)} crypto from CryptoCompare...")
-            except Exception as e:
-                errors.append(f"{symbol}: {str(e)}")
-        
-        print(f"✓ Loaded {len([s for s in cryptocompare_symbols if s in all_data])} from CryptoCompare")
-    else:
-        print("⚡ TEST MODE: Skipping CryptoCompare")
-        cryptocompare_symbols = []
+    # Skip CryptoCompare for now (only using BTC + ETH from Coinbase)
+    cryptocompare_symbols = []
     
     print(f"✓ Loaded {len([s for s in coinbase_symbols if s in all_data]) + len([s for s in cryptocompare_symbols if s in all_data])} cryptocurrencies total")
     
