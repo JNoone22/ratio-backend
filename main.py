@@ -13,6 +13,7 @@ from massive_client import MassiveClient
 from coincap_client import CoinbaseClient
 from cryptocompare_client import CryptoCompareClient
 from cache_manager import CacheManager
+from name_lookup import NameLookup
 from tournament import calculate_tournament_rankings, format_rankings_summary
 
 app = Flask(__name__)
@@ -23,8 +24,9 @@ massive = MassiveClient(config.MASSIVE_API_KEY)
 coinbase = CoinbaseClient()
 cryptocompare = CryptoCompareClient()
 
-# Initialize persistent cache
+# Initialize persistent cache and name lookup
 cache_manager = CacheManager()
+name_lookup = NameLookup()
 cache = cache_manager.data  # For backwards compatibility
 
 def fetch_single_asset(symbol: str) -> list:
@@ -270,7 +272,7 @@ def update_rankings(test_mode=False, asset_type=None, symbol=None):
         cryptocompare_crypto = set(cryptocompare.symbols.keys())
         all_crypto_symbols = coinbase_crypto | cryptocompare_crypto
         
-        # Add asset type to each ranking
+        # Add asset type and name to each ranking
         for asset in all_rankings:
             symbol = asset['symbol']
             if symbol in all_crypto_symbols:
@@ -281,6 +283,9 @@ def update_rankings(test_mode=False, asset_type=None, symbol=None):
                 asset['type'] = 'stock'
             else:
                 asset['type'] = 'stock'  # Default to stock
+            
+            # Add asset name
+            asset['name'] = name_lookup.get_name(symbol, asset['type'], config.MASSIVE_API_KEY)
         
         # Identify crypto assets for crypto explorer
         crypto_rankings = [
@@ -427,6 +432,40 @@ def network_test():
         results['coinbase_http'] = f'✗ HTTP failed: {str(e)}'
     
     return jsonify(results)
+
+@app.route('/api/cron-update', methods=['GET', 'POST'])
+def cron_update():
+    """
+    Automated update endpoint for cron jobs
+    Only does incremental updates, never full refresh
+    """
+    try:
+        # Update each type sequentially
+        print("\n🤖 CRON: Starting automated update...")
+        
+        # Update stocks
+        print("Updating stocks...")
+        update_rankings(test_mode=False, asset_type='stocks')
+        
+        # Update ETFs
+        print("Updating ETFs...")
+        update_rankings(test_mode=False, asset_type='etfs')
+        
+        # Update crypto
+        print("Updating crypto...")
+        update_rankings(test_mode=False, asset_type='crypto')
+        
+        print("🤖 CRON: Update complete!")
+        
+        return jsonify({
+            'message': 'Automated update successful',
+            'timestamp': cache['last_update'],
+            'metadata': cache_manager.data['metadata']
+        })
+        
+    except Exception as e:
+        print(f"🤖 CRON: Update failed - {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/update', methods=['GET', 'POST'])
 def trigger_update():
