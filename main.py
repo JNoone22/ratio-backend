@@ -12,6 +12,7 @@ import config
 from massive_client import MassiveClient
 from coincap_client import CoinbaseClient
 from cryptocompare_client import CryptoCompareClient
+from cache_manager import CacheManager
 from tournament import calculate_tournament_rankings, format_rankings_summary
 
 app = Flask(__name__)
@@ -22,12 +23,102 @@ massive = MassiveClient(config.MASSIVE_API_KEY)
 coinbase = CoinbaseClient()
 cryptocompare = CryptoCompareClient()
 
-# In-memory cache (will use Redis in production)
-cache = {
-    'big_board': None,
-    'crypto_explorer': None,
-    'last_update': None
-}
+# Initialize persistent cache
+cache_manager = CacheManager()
+cache = cache_manager.data  # For backwards compatibility
+
+def fetch_single_asset(symbol: str) -> list:
+    """
+    Fetch data for a single asset
+    Returns: List of weekly prices or None if failed
+    """
+    print(f"    Fetching {symbol}...")
+    
+    # Try Coinbase first (if it's crypto)
+    if symbol in coinbase.get_all_products():
+        try:
+            return coinbase.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+        except:
+            pass
+    
+    # Try CryptoCompare (if it's crypto)
+    if symbol in cryptocompare.symbols:
+        try:
+            return cryptocompare.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+        except:
+            pass
+    
+    # Try Massive (stocks/ETFs)
+    try:
+        return massive.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+    except Exception as e:
+        print(f"    ✗ {symbol}: {e}")
+        return None
+
+def fetch_assets_by_type(asset_type: str, test_mode=False) -> dict:
+    """
+    Fetch data for assets of a specific type
+    Returns: Dict of {symbol: [prices]}
+    """
+    all_data = {}
+    
+    if asset_type == 'stocks':
+        symbols = massive.get_sp500_symbols()
+        if test_mode:
+            symbols = symbols[:50]
+        print(f"Fetching {len(symbols)} stocks...")
+        
+        for symbol in symbols:
+            try:
+                prices = massive.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+                if len(prices) >= config.MA_PERIOD:
+                    all_data[symbol] = prices
+            except:
+                pass
+    
+    elif asset_type == 'etfs':
+        symbols = massive.get_major_etfs()
+        if test_mode:
+            symbols = symbols[:10]
+        print(f"Fetching {len(symbols)} ETFs...")
+        
+        for symbol in symbols:
+            try:
+                prices = massive.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+                if len(prices) >= config.MA_PERIOD:
+                    all_data[symbol] = prices
+            except:
+                pass
+    
+    elif asset_type == 'crypto':
+        # Coinbase crypto
+        symbols = coinbase.get_top_crypto_symbols(limit=config.CRYPTO_LIMIT)
+        if test_mode:
+            symbols = symbols[:10]
+        print(f"Fetching {len(symbols)} crypto from Coinbase...")
+        
+        for symbol in symbols:
+            try:
+                prices = coinbase.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+                if len(prices) >= config.MA_PERIOD:
+                    all_data[symbol] = prices
+            except:
+                pass
+        
+        # CryptoCompare crypto (if not test mode)
+        if not test_mode:
+            cc_symbols = cryptocompare.get_symbols()
+            print(f"Fetching {len(cc_symbols)} crypto from CryptoCompare...")
+            for symbol in cc_symbols:
+                try:
+                    prices = cryptocompare.get_weekly_data(symbol, weeks=config.MA_PERIOD)
+                    if len(prices) >= config.MA_PERIOD:
+                        all_data[symbol] = prices
+                    time.sleep(1)  # Rate limiting
+                except:
+                    pass
+    
+    return all_data
 
 def fetch_all_assets(test_mode=False):
     """
@@ -165,17 +256,44 @@ def fetch_all_assets(test_mode=False):
     
     return all_data
 
-def update_rankings(test_mode=False):
+def update_rankings(test_mode=False, asset_type=None, symbol=None):
     """
     Fetch fresh data and calculate rankings
     Updates global cache
     
     Args:
         test_mode: If True, use limited asset set for fast iteration (2-3 min)
+        asset_type: If set, only update this type ('stocks', 'etfs', 'crypto')
+        symbol: If set, only update this single asset
     """
     try:
-        # Fetch all asset data
-        assets_data = fetch_all_assets(test_mode=test_mode)
+        # Start with existing cached data
+        existing_data = cache_manager.get_assets().copy()
+        
+        # Determine what to fetch
+        if symbol:
+            # INCREMENTAL: Add/update single asset
+            print(f"\n⚡ INCREMENTAL UPDATE: {symbol}")
+            new_data = fetch_single_asset(symbol)
+            if new_data:
+                existing_data[symbol] = new_data
+            assets_data = existing_data
+            
+        elif asset_type:
+            # TYPE-SPECIFIC: Update only one asset type
+            print(f"\n⚡ TYPE-SPECIFIC UPDATE: {asset_type}")
+            new_data = fetch_assets_by_type(asset_type, test_mode=test_mode)
+            # Merge with existing
+            existing_data.update(new_data)
+            assets_data = existing_data
+            
+        else:
+            # FULL UPDATE: Fetch everything
+            print(f"\n⚡ FULL UPDATE")
+            assets_data = fetch_all_assets(test_mode=test_mode)
+        
+        # Save asset data to persistent cache
+        cache_manager.data['assets'] = assets_data
         
         if len(assets_data) < 10:
             raise ValueError("Not enough assets loaded")
@@ -220,12 +338,12 @@ def update_rankings(test_mode=False):
                asset['symbol'] in top_20_crypto_symbols  # Or top 20 crypto
         ]
         
-        # Update cache
-        cache['big_board'] = big_board
-        cache['crypto_explorer'] = crypto_rankings
-        cache['last_update'] = datetime.now().isoformat()
+        # Update cache and save to disk
+        cache_manager.update_rankings(big_board, crypto_rankings)
+        cache_manager.save()
         
         print("\n✅ Rankings updated successfully!")
+        print(f"📊 Total assets: {len(assets_data)} ({cache_manager.data['metadata']['stocks']} stocks, {cache_manager.data['metadata']['etfs']} ETFs, {cache_manager.data['metadata']['crypto']} crypto)")
         print(format_rankings_summary(big_board, top_n=10))
         
         return True
@@ -351,17 +469,48 @@ def network_test():
 
 @app.route('/api/update', methods=['GET', 'POST'])
 def trigger_update():
-    """Manually trigger data update (for testing)"""
-    # Check for test mode
-    test_mode = request.args.get('test', '').lower() == 'true'
+    """
+    Manually trigger data update
     
-    success = update_rankings(test_mode=test_mode)
+    Parameters:
+        test=true - Use limited asset set (70 assets, ~2-3 min)
+        type=stocks|etfs|crypto - Update only specific asset type
+        symbol=BTC - Update single asset
+    
+    Examples:
+        /api/update - Full update (all assets)
+        /api/update?test=true - Fast test mode
+        /api/update?type=crypto - Update only crypto
+        /api/update?symbol=BNB - Add/update just BNB
+    """
+    # Parse parameters
+    test_mode = request.args.get('test', '').lower() == 'true'
+    asset_type = request.args.get('type', '').lower() or None
+    symbol = request.args.get('symbol', '').upper() or None
+    
+    # Validate asset_type
+    if asset_type and asset_type not in ['stocks', 'etfs', 'crypto']:
+        return jsonify({'error': 'Invalid type. Must be: stocks, etfs, or crypto'}), 400
+    
+    # Execute update
+    success = update_rankings(test_mode=test_mode, asset_type=asset_type, symbol=symbol)
+    
     if success:
-        mode_msg = ' (TEST MODE - limited assets)' if test_mode else ''
+        # Build response message
+        if symbol:
+            mode_msg = f'Updated {symbol}'
+        elif asset_type:
+            mode_msg = f'Updated {asset_type}'
+        elif test_mode:
+            mode_msg = 'Test mode update (limited assets)'
+        else:
+            mode_msg = 'Full update'
+        
         return jsonify({
-            'message': f'Update successful{mode_msg}',
+            'message': f'{mode_msg} successful',
             'timestamp': cache['last_update'],
-            'assets': len(cache.get('big_board', []))
+            'assets': len(cache.get('big_board', [])),
+            'metadata': cache_manager.data['metadata']
         })
     else:
         return jsonify({'error': 'Update failed'}), 500
