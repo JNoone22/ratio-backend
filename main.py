@@ -9,7 +9,7 @@ import time
 import json
 
 import config
-from massive_client import MassiveClient
+from massive_client import MassiveClient 
 from coincap_client import CoinbaseClient
 from cryptocompare_client import CryptoCompareClient
 from cache_manager import CacheManager
