@@ -1,5 +1,5 @@
 """
-Ratio - Asset Strength Rankings API
+Ratio - Asset Strength Rankings API 
 Main Flask application
 """
 from flask import Flask, jsonify, request
