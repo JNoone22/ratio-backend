@@ -11,34 +11,56 @@ import time
 class CryptoCompareClient:
     def __init__(self):
         self.base_url = 'https://min-api.cryptocompare.com/data/v2'
+        # Free tier: 100,000 calls/month, ~50 calls/minute - MUCH better than CoinGecko!
         
-        # Symbols for top 50 coins NOT on Coinbase
-        self.symbols = {
-            'BNB': 'BNB',      # Binance Coin - #4 market cap!
-            'TRX': 'TRX',      # Tron
-            'TON': 'TON',      # Telegram
-            'HBAR': 'HBAR',    # Hedera
-            'VET': 'VET',      # VeChain
-            'FTM': 'FTM',      # Fantom
-            'ARB': 'ARB',      # Arbitrum
-            'OP': 'OP',        # Optimism
-            'PEPE': 'PEPE',    # Pepe
-            'WIF': 'WIF',      # dogwifhat
-            'BONK': 'BONK',    # Bonk
-        }
+    def get_top_coins(self, limit: int = 200) -> List[str]:
+        """
+        Get top cryptocurrencies by market cap from CryptoCompare
+        """
+        try:
+            url = 'https://min-api.cryptocompare.com/data/top/mktcapfull'
+            params = {
+                'limit': min(limit, 100),  # CryptoCompare max is 100 per call
+                'tsym': 'USD'
+            }
+            
+            response = requests.get(url, params=params, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data.get('Response') == 'Success' and 'Data' in data:
+                symbols = [coin['CoinInfo']['Name'] for coin in data['Data']]
+                print(f"    ✓ Got {len(symbols)} coins from CryptoCompare")
+                return symbols
+            else:
+                raise Exception(f"API error: {data.get('Message', 'Unknown error')}")
+                
+        except Exception as e:
+            print(f"    ✗ CryptoCompare API error: {e}")
+            print(f"    Using fallback top 100 list...")
+            
+            # Hardcoded top 100 (fallback)
+            return ['BTC', 'ETH', 'USDT', 'BNB', 'SOL', 'USDC', 'XRP', 'DOGE', 'ADA', 'TRX',
+                    'AVAX', 'SHIB', 'TON', 'LINK', 'DOT', 'MATIC', 'LTC', 'BCH', 'UNI', 'NEAR',
+                    'ICP', 'PEPE', 'HBAR', 'APT', 'FET', 'ETC', 'STX', 'XLM', 'INJ', 'CRO',
+                    'RNDR', 'ATOM', 'ARB', 'IMX', 'OP', 'MKR', 'FIL', 'VET', 'RUNE', 'XMR',
+                    'ALGO', 'AAVE', 'GRT', 'THETA', 'FTM', 'SAND', 'MANA', 'EOS', 'FLOW', 'XTZ',
+                    'AXS', 'EGLD', 'FLOKI', 'CHZ', 'NEO', 'MINA', 'KAVA', 'SNX', 'GALA', 'QNT',
+                    'CFX', 'FLR', 'IOTA', 'ZEC', 'DASH', 'COMP', 'LDO', '1INCH', 'ENJ', 'CAKE',
+                    'BAT', 'ZIL', 'WAVES', 'CRV', 'YFI', 'GMT', 'HNT', 'SUSHI', 'OMG', 'ANT',
+                    'AUDIO', 'BAL', 'BAND', 'BNT', 'CELR', 'CHR', 'COTI', 'CVX', 'DYDX', 'GNO',
+                    'ICX', 'KLAY', 'KNC', 'KSM', 'LQTY', 'MASK', 'OXT', 'PERP', 'POLY', 'RAY'][:limit]
     
     def get_symbols(self) -> List[str]:
-        """Get list of symbols this client handles"""
-        return list(self.symbols.keys())
+        """Get list of available symbols - deprecated, use get_top_coins instead"""
+        return self.get_top_coins(100)
     
     def get_weekly_data(self, symbol: str, weeks: int = 20) -> List[float]:
         """
         Get weekly closing prices for a crypto
         Returns list of closes, most recent first
+        Works for ANY cryptocurrency symbol
         """
-        if symbol not in self.symbols:
-            raise ValueError(f"Symbol {symbol} not supported by CryptoCompare client")
-        
         # CryptoCompare uses daily data, we'll convert to weekly
         days = weeks * 7 + 30  # Extra buffer
         
@@ -51,9 +73,7 @@ class CryptoCompareClient:
         }
         
         try:
-            print(f"    Fetching {symbol} from CryptoCompare...")
             response = requests.get(url, params=params, timeout=15)
-            print(f"    Response status: {response.status_code}")
             response.raise_for_status()
             data = response.json()
             
@@ -75,8 +95,6 @@ class CryptoCompareClient:
             
             # Reverse to get most recent first
             weekly_prices.reverse()
-            
-            print(f"    ✓ {symbol}: Got {len(weekly_prices)} weeks")
             
             # Return first N weeks
             return weekly_prices[:weeks]
