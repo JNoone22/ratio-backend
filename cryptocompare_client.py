@@ -68,14 +68,14 @@ class CryptoCompareClient:
         top_100 = [
             'BTC', 'ETH', 'USDT', 'BNB', 'SOL', 'USDC', 'XRP', 'DOGE', 'ADA', 'TRX',
             'AVAX', 'SHIB', 'TON', 'LINK', 'DOT', 'BCH', 'LTC', 'UNI', 'NEAR', 'ICP',
-            'PEPE', 'HBAR', 'APT', 'FET', 'ETC', 'STX', 'XLM', 'INJ', 'CRO', 'RNDR',
-            'ATOM', 'ARB', 'IMX', 'OP', 'MKR', 'FIL', 'VET', 'RUNE', 'XMR', 'ALGO',
-            'AAVE', 'GRT', 'THETA', 'FTM', 'SAND', 'MANA', 'EOS', 'FLOW', 'XTZ', 'AXS',
-            'EGLD', 'FLOKI', 'CHZ', 'NEO', 'MINA', 'KAVA', 'SNX', 'GALA', 'QNT', 'CFX',
-            'FLR', 'ZEC', 'DASH', 'COMP', 'LDO', '1INCH', 'ENJ', 'CAKE', 'BAT', 'ZIL',
-            'CRV', 'YFI', 'GMT', 'HNT', 'SUSHI', 'CVX', 'DYDX', 'KSM', 'MASK', 'RAY',
-            'WIF', 'BONK', 'TIA', 'SEI', 'JUP', 'WLD', 'PYTH', 'STRK', 'BLUR', 'ENS',
-            'LRC', 'OCEAN', 'MATIC', 'ROSE', 'AUDIO', 'ANKR', 'JASMY', 'IOTX', 'CELO'
+            'PEPE', 'HBAR', 'APT', 'FET', 'ETC', 'STX', 'XLM', 'INJ', 'CRO', 'RNDR', 
+            'ATOM', 'ARB', 'IMX', 'OP', 'MKR', 'FIL', 'VET', 'RUNE', 'XMR', 'ALGO', 'ONDO', 
+            'AAVE', 'GRT', 'THETA', 'FTM', 'SAND', 'MANA', 'EOS', 'FLOW', 'XTZ', 'AXS', 'ICP', 
+            'EGLD', 'FLOKI', 'CHZ', 'NEO', 'MINA', 'KAVA', 'SNX', 'GALA', 'QNT', 'CFX', 'M', 
+            'FLR', 'ZEC', 'DASH', 'COMP', 'LDO', '1INCH', 'ENJ', 'CAKE', 'BAT', 'ZIL', 'ASTER',
+            'CRV', 'YFI', 'GMT', 'HNT', 'SUSHI', 'CVX', 'DYDX', 'KSM', 'MASK', 'RAY', 'OKB', 
+            'WIF', 'BONK', 'TIA', 'SEI', 'JUP', 'WLD', 'PYTH', 'STRK', 'BLUR', 'ENS', 'PI', 'SKY', 
+            'LRC', 'OCEAN', 'MATIC', 'ROSE', 'AUDIO', 'ANKR', 'TAO', 'JASMY', 'CC', 'IOTX', 'CELO'
         ]
         
         # Must-include coins that may not be in top 100 but we want
